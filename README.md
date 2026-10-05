@@ -10,7 +10,7 @@ LiveStream Code Editor là một ứng dụng web cho phép lập trình viên, 
 
 ## ✨ Tính năng nổi bật
 
-- 📝 **Soạn thảo đa file**: Hỗ trợ 3 tab chính cho `index.html`, `style.css`, và `script.js`.
+- 📝 **Soạn thảo đa file**: Hỗ trợ 3 tab chính cho `index.html`, `style.css`, và `script.js`. Khi tải xuống: cho phép tải với 1 file html hoặc 1 file zip với 3 file: html, javasctipt và css.
 - 👁️ **Xem trước thời gian thực (Live Preview)**: Tự động cập nhật khung xem trước khi gõ (Auto-run) hoặc bấm nút Run thủ công.
 - 📟 **Console Output tích hợp**: Bắt log, hiển thị thông báo và lỗi JavaScript trực tiếp trong giao diện, giúp debug nhanh chóng.
 - 📚 **Tích hợp CDN nhanh**: Hỗ trợ nạp nhanh các thư viện phổ biến chỉ với 1 click (Tailwind, Bootstrap, FontAwesome, Three.js...).
