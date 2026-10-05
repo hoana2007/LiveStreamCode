@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveStream Code Editor - Soạn mã trực tiếp</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        github: {
+                            dark: '#0d1117',
+                            darkSecondary: '#161b22',
+                            darkBorder: '#30363d',
+                            darkText: '#f0f6fc',
+                            darkMuted: '#8b949e',
+                            light: '#ffffff',
+                            lightSecondary: '#f6f8fa',
+                            lightBorder: '#d0d7de',
+                            lightText: '#1f2328',
+                            lightMuted: '#636c76',
+                            accent: '#2f81f7',
+                            accentHover: '#388bfd',
+                            green: '#238636',
+                            greenHover: '#2ea043'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- CodeMirror 5 Styles & Scripts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/neo.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/hint/show-hint.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closetag.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+
+    <!-- JSZip (for exporting project as ZIP with separate HTML/CSS/JS files) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .CodeMirror {
+            height: 100% !important;
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        /* Light mode CodeMirror custom override */
+        .html-light .CodeMirror {
+            background-color: #ffffff !important;
+            color: #1f2328 !important;
+        }
+        .html-light .CodeMirror-gutters {
+            background-color: #f6f8fa !important;
+            border-right: 1px solid #d0d7de !important;
+        }
+        .html-light .CodeMirror-linenumber {
+            color: #8c959f !important;
+        }
+
+        /* Dark mode CodeMirror custom override */
+        .html-dark .CodeMirror {
+            background-color: #0d1117 !important;
+            color: #f0f6fc !important;
+        }
+        .html-dark .CodeMirror-gutters {
+            background-color: #161b22 !important;
+            border-right: 1px solid #30363d !important;
+        }
+        .html-dark .CodeMirror-linenumber {
+            color: #6e7681 !important;
+        }
+
+        .gutter-drag {
+            touch-action: none;
+            user-select: none;
+        }
+
+        /* GitHub Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d0d7de;
+            border-radius: 4px;
+        }
+        
+        .console-log { border-bottom: 1px solid rgba(120, 120, 120, 0.15); }
+        .console-error { color: #f85149; background: rgba(248, 81, 73, 0.1); }
+        .console-warn { color: #d29922; background: rgba(210, 153, 34, 0.1); }
+        .console-info { color: #58a6ff; }
+
+        @media (max-width: 1024px) {
+            .lg\:flex {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            body {
+                height: auto !important;
+                min-height: 100vh !important;
+                overflow: auto !important;
+                overflow-x: hidden !important;
+            }
+
+            header {
+                position: relative;
+                min-height: 88px;
+                height: auto !important;
+                padding: 0.6rem 0.75rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                align-items: center;
+            }
+
+            .brand-wrap {
+                min-width: 0;
+                flex: 1 1 auto;
+            }
+
+            #header-actions {
+                width: 100%;
+                display: flex;
+                justify-content: flex-end;
+                align-items: center;
+                gap: 0.35rem;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding-bottom: 0.1rem;
+                scrollbar-width: none;
+            }
+
+            #header-actions::-webkit-scrollbar {
+                display: none;
+            }
+
+            #header-actions > * {
+                flex: 0 0 auto;
+            }
+
+            #project-title {
+                max-width: 120px;
+                font-size: 12px;
+            }
+
+            #auto-run-wrapper,
+            #library-btn,
+            #share-btn,
+            #export-btn,
+            #reset-btn {
+                display: none !important;
+            }
+
+            #theme-toggle-btn,
+            #lang-toggle-btn,
+            #run-btn {
+                display: inline-flex !important;
+            }
+
+            #header-actions > button,
+            #header-actions label {
+                padding: 0.4rem 0.55rem;
+                min-height: 32px;
+            }
+
+            #mobile-menu-panel {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 60;
+                display: block;
+                padding: 0.55rem 0.65rem calc(0.75rem + env(safe-area-inset-bottom));
+                background: rgba(15, 23, 42, 0.9);
+                border-top: 1px solid rgba(148, 163, 184, 0.22);
+                backdrop-filter: blur(12px);
+                box-shadow: 0 -12px 28px rgba(15, 23, 42, 0.2);
+            }
+
+            #mobile-menu-panel .mobile-menu-item {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 0.2rem;
+                min-height: 52px;
+                padding: 0.35rem 0.25rem;
+                border-radius: 0.8rem;
+                color: #cbd5e1;
+                background: transparent;
+                font-size: 0.62rem;
+                font-weight: 600;
+                text-align: center;
+            }
+
+            #mobile-menu-panel .mobile-menu-item i {
+                width: 1.05rem;
+                height: 1.05rem;
+            }
+
+            #mobile-menu-panel .mobile-menu-item .meta {
+                display: none;
+            }
+
+            #mobile-menu-panel .mobile-menu-item.active {
+                background: rgba(47, 129, 247, 0.12);
+                color: #f8fafc;
+            }
+
+            body {
+                padding-bottom: 72px;
+            }
+
+            main {
+                flex-direction: column;
+                min-height: 0;
+            }
+
+            #editor-container,
+            #preview-container {
+                width: 100% !important;
+                min-width: 0 !important;
+                height: 46vh !important;
+                min-height: 240px !important;
+            }
+
+            #split-gutter {
+                width: 100% !important;
+                height: 10px !important;
+                min-height: 10px !important;
+                cursor: row-resize !important;
+            }
+
+            .tab-btn {
+                padding-left: 0.6rem !important;
+                padding-right: 0.6rem !important;
+            }
+
+            #console-pane {
+                height: 170px !important;
+            }
+
+            footer {
+                min-height: 42px;
+                height: auto;
+                padding: 0.45rem 0.75rem;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+
+            #footer-status {
+                white-space: normal;
+                line-height: 1.3;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .sm\:inline {
+                display: none !important;
+            }
+
+            .brand-wrap {
+                max-width: 100%;
+            }
+
+            #project-title {
+                max-width: 90px;
+            }
+
+            #lang-toggle-btn,
+            #theme-toggle-btn,
+            #run-btn,
+            #mobile-menu-toggle {
+                width: 32px;
+                height: 32px;
+                padding: 0.4rem;
+            }
+
+            #console-pane {
+                height: 150px !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-github-light dark:bg-github-dark text-github-lightText dark:text-github-darkText h-screen w-screen overflow-hidden flex flex-col font-sans select-none transition-colors duration-200">
+
+    <!-- GitHub Style Header Navigation Bar -->
+    <header class="h-14 border-b border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary dark:bg-github-darkSecondary px-4 flex items-center justify-between z-20 shrink-0">
+        <div class="brand-wrap flex items-center space-x-3 min-w-0">
+            <!-- GitHub Logo & Brand Badge -->
+            <div class="flex items-center space-x-2 text-github-lightText dark:text-github-darkText">
+                <i data-lucide="code-2" class="w-6 h-6 text-github-accent"></i>
+                <span class="font-bold text-sm tracking-wide hidden sm:inline">LiveStream Code Editor</span>
+            </div>
+            
+            <span class="text-github-lightMuted dark:text-github-darkMuted hidden sm:inline">/</span>
+
+            <!-- Editable Project Title -->
+            <div class="flex items-center space-x-1.5">
+                <i data-lucide="code-2" class="w-4 h-4 text-github-accent"></i>
+                <input type="text" id="project-title" value="my-web-project" class="bg-transparent text-sm font-mono font-semibold focus:outline-none focus:bg-github-light dark:focus:bg-github-dark border border-transparent hover:border-github-lightBorder dark:hover:border-github-darkBorder px-2 py-1 rounded transition text-github-lightText dark:text-github-darkText">
+            </div>
+        </div>
+
+        <!-- Center Controls: Device Mode Switcher -->
+        <div class="hidden lg:flex items-center space-x-1 bg-github-light dark:bg-github-dark p-1 rounded-md border border-github-lightBorder dark:border-github-darkBorder text-xs">
+            <button id="btn-device-desktop" onclick="setDeviceMode('full')" class="px-2.5 py-1 font-medium rounded flex items-center space-x-1.5 bg-github-lightSecondary dark:bg-github-darkSecondary text-github-accent shadow-sm transition">
+                <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+                <span>Desktop</span>
+            </button>
+            <button id="btn-device-tablet" onclick="setDeviceMode('768px')" class="px-2.5 py-1 font-medium rounded flex items-center space-x-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText transition">
+                <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
+                <span>Tablet</span>
+            </button>
+            <button id="btn-device-mobile" onclick="setDeviceMode('375px')" class="px-2.5 py-1 font-medium rounded flex items-center space-x-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText transition">
+                <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                <span>Mobile</span>
+            </button>
+        </div>
+
+        <!-- Right Side Controls & Actions -->
+        <div id="header-actions" class="flex items-center space-x-2">
+            <!-- Theme Toggle Button (Light/Dark Mode) -->
+            <button id="theme-toggle-btn" onclick="toggleTheme()" class="p-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText hover:bg-github-light dark:hover:bg-github-dark rounded-md border border-github-lightBorder dark:border-github-darkBorder transition" title="Chuyển đổi Chế độ Sáng / Tối">
+                <i data-lucide="sun" id="theme-icon-sun" class="w-4 h-4 hidden"></i>
+                <i data-lucide="moon" id="theme-icon-moon" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Language Switcher Button (VI / EN) -->
+            <button id="lang-toggle-btn" onclick="toggleLanguage()" class="px-2 py-1 text-xs font-mono font-bold text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText hover:bg-github-light dark:hover:bg-github-dark rounded-md border border-github-lightBorder dark:border-github-darkBorder transition flex items-center space-x-1" title="Chuyển đổi Ngôn ngữ / Switch Language">
+                <i data-lucide="languages" class="w-3.5 h-3.5 text-github-accent"></i>
+                <span id="lang-indicator">VI</span>
+            </button>
+
+            <!-- External CDN Library Trigger -->
+            <button id="library-btn" onclick="toggleModal('library-modal')" class="px-2.5 py-1.5 text-xs font-medium bg-github-light dark:bg-github-dark hover:bg-github-lightSecondary dark:hover:bg-github-darkSecondary text-github-lightText dark:text-github-darkText rounded-md border border-github-lightBorder dark:border-github-darkBorder flex items-center space-x-1.5 transition">
+                <i data-lucide="box" class="w-3.5 h-3.5 text-github-accent"></i>
+                <span class="library-label hidden sm:inline" data-i18n="libraries">Thư viện</span>
+                <span id="active-cdn-badge" class="hidden bg-github-accent/20 text-github-accent border border-github-accent/30 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0</span>
+            </button>
+
+            <!-- Auto-Run Checkbox -->
+            <label id="auto-run-wrapper" class="hidden md:flex items-center space-x-1.5 text-xs text-github-lightMuted dark:text-github-darkMuted cursor-pointer bg-github-light dark:bg-github-dark border border-github-lightBorder dark:border-github-darkBorder px-2.5 py-1.5 rounded-md">
+                <input type="checkbox" id="auto-run-toggle" checked class="rounded border-github-lightBorder dark:border-github-darkBorder text-github-accent focus:ring-0">
+                <span data-i18n="autoRun">Auto-run</span>
+            </label>
+
+            <!-- Manual Run Button -->
+            <button id="run-btn" onclick="triggerRunCode()" class="px-3 py-1.5 text-xs font-semibold bg-github-green hover:bg-github-greenHover text-white rounded-md flex items-center space-x-1.5 transition shadow-sm">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                <span data-i18n="run">Run</span>
+            </button>
+
+            <!-- Share Button -->
+            <button id="share-btn" onclick="shareProject()" class="p-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText hover:bg-github-light dark:hover:bg-github-dark rounded-md border border-github-lightBorder dark:border-github-darkBorder transition" title="Chia sẻ URL" data-i18n-title="shareTitle">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Export File -->
+            <button id="export-btn" onclick="toggleModal('export-modal')" class="p-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText hover:bg-github-light dark:hover:bg-github-dark rounded-md border border-github-lightBorder dark:border-github-darkBorder transition" title="Tải xuống HTML" data-i18n-title="exportTitle">
+                <i data-lucide="download" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Reset Code Button -->
+            <button id="reset-btn" onclick="openResetModal()" class="p-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-rose-500 hover:bg-github-light dark:hover:bg-github-dark rounded-md border border-github-lightBorder dark:border-github-darkBorder transition" title="Làm mới mã" data-i18n-title="resetTitle">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </button>
+
+        </div>
+    </header>
+
+    <div id="mobile-menu-panel" class="md:hidden">
+        <div class="flex items-center justify-between gap-2 rounded-2xl bg-slate-900/80 p-1.5 border border-slate-700/70">
+            <button class="mobile-menu-item" onclick="toggleModal('library-modal'); closeMobileMenu();">
+                <i data-lucide="box" class="w-4 h-4 text-github-accent"></i>
+                <span>Thư viện</span>
+                <span id="mobile-menu-cdn-badge" class="meta hidden">0</span>
+            </button>
+            <button class="mobile-menu-item" onclick="toggleTheme(); closeMobileMenu();">
+                <i data-lucide="sun" class="w-4 h-4"></i>
+                <span>Chế độ</span>
+            </button>
+            <button class="mobile-menu-item" onclick="shareProject(); closeMobileMenu();">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
+                <span>Chia sẻ</span>
+            </button>
+            <button class="mobile-menu-item" onclick="toggleModal('export-modal'); closeMobileMenu();">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Xuất</span>
+            </button>
+            <button class="mobile-menu-item" onclick="openResetModal(); closeMobileMenu();">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                <span>Khôi phục</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Workspace Split Pane -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        <!-- Left Side: Code Editors Box -->
+        <div id="editor-container" class="w-full md:w-1/2 h-1/2 md:h-full flex flex-col bg-github-light dark:bg-github-dark border-r border-github-lightBorder dark:border-github-darkBorder relative min-w-[280px]">
+            
+            <!-- GitHub Nav Tabs Header -->
+            <div class="h-10 bg-github-lightSecondary dark:bg-github-darkSecondary border-b border-github-lightBorder dark:border-github-darkBorder flex items-center justify-between px-3 shrink-0">
+                <div class="flex items-center space-x-1">
+                    <button onclick="switchTab('html')" id="tab-btn-html" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-t-md flex items-center space-x-1.5 border-b-2 border-github-accent text-github-accent bg-github-light dark:bg-github-dark">
+                        <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+                        <span>index.html</span>
+                    </button>
+                    <button onclick="switchTab('css')" id="tab-btn-css" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-t-md flex items-center space-x-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText">
+                        <i data-lucide="palette" class="w-3.5 h-3.5"></i>
+                        <span>style.css</span>
+                    </button>
+                    <button onclick="switchTab('js')" id="tab-btn-js" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-t-md flex items-center space-x-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText">
+                        <i data-lucide="file-json" class="w-3.5 h-3.5"></i>
+                        <span>script.js</span>
+                    </button>
+                </div>
+
+                <!-- Active Editor Quick Actions -->
+                <div class="flex items-center space-x-2 text-xs text-github-lightMuted dark:text-github-darkMuted">
+                    <button onclick="formatActiveEditor()" class="hover:text-github-lightText dark:hover:text-github-darkText p-1" title="Định dạng Code">
+                        <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <span class="opacity-30">|</span>
+                    <span id="editor-cursor-pos" class="font-mono text-[11px]">Ln 1, Col 1</span>
+                </div>
+            </div>
+
+            <!-- CodeMirror Editor Wrappers -->
+            <div class="flex-1 relative overflow-hidden">
+                <div id="wrapper-html" class="editor-wrapper absolute inset-0"></div>
+                <div id="wrapper-css" class="editor-wrapper absolute inset-0 hidden"></div>
+                <div id="wrapper-js" class="editor-wrapper absolute inset-0 hidden"></div>
+            </div>
+        </div>
+
+        <!-- Splitter Drag Handle -->
+        <div id="split-gutter" class="gutter-drag w-full h-1.5 md:w-1.5 md:h-full bg-github-lightBorder dark:bg-github-darkBorder hover:bg-github-accent cursor-row-resize md:cursor-col-resize transition-colors shrink-0 z-10"></div>
+
+        <!-- Right Side: Live Preview & Integrated Developer Console -->
+        <div id="preview-container" class="flex-1 h-1/2 md:h-full flex flex-col bg-github-light dark:bg-github-dark relative min-w-[280px]">
+            
+            <!-- Live Preview Viewport -->
+            <div class="flex-1 relative flex items-center justify-center bg-github-lightSecondary dark:bg-github-darkSecondary overflow-hidden" id="preview-viewport-box">
+                <div id="iframe-shield" class="absolute inset-0 z-20 hidden"></div>
+
+                <!-- Secure Sandboxed Preview Iframe -->
+                <iframe id="live-preview-iframe" 
+                        sandbox="allow-scripts allow-modals allow-forms" 
+                        class="bg-white w-full h-full border-none transition-all duration-300 shadow-sm">
+                </iframe>
+            </div>
+
+            <!-- Integrated Developer Console Pane -->
+            <div id="console-pane" class="h-44 border-t border-github-lightBorder dark:border-github-darkBorder bg-github-light dark:bg-github-dark flex flex-col shrink-0">
+                
+                <!-- Console Toolbar -->
+                <div class="h-8 bg-github-lightSecondary dark:bg-github-darkSecondary border-b border-github-lightBorder dark:border-github-darkBorder px-3 flex items-center justify-between text-xs shrink-0">
+                    <div class="flex items-center space-x-2 font-semibold text-github-lightText dark:text-github-darkText">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5 text-github-accent"></i>
+                        <span data-i18n="consoleOutput">Console Output</span>
+                        <span id="console-count" class="bg-github-light dark:bg-github-dark text-github-lightMuted dark:text-github-darkMuted border border-github-lightBorder dark:border-github-darkBorder px-1.5 py-0.2 rounded text-[10px] font-mono">0</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="clearConsole()" class="text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText flex items-center space-x-1">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                            <span data-i18n="clear">Clear</span>
+                        </button>
+                        <button onclick="toggleConsoleExpand()" class="text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText p-0.5">
+                            <i data-lucide="chevron-up" id="console-expand-icon" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Console Output Logs Stream -->
+                <div id="console-logs" class="flex-1 overflow-y-auto font-mono text-xs p-2 space-y-1">
+                    <div class="text-github-lightMuted dark:text-github-darkMuted italic text-[11px]" id="console-placeholder" data-i18n="consoleReady">Sẵn sàng nhận log từ JavaScript...</div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- GitHub Style Footer -->
+    <footer class="h-8 border-t border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary dark:bg-github-darkSecondary px-4 flex items-center justify-between text-xs text-github-lightMuted dark:text-github-darkMuted font-sans shrink-0 z-20">
+        <div id="footer-status" class="flex items-center space-x-2 min-w-0">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+            <span class="text-[11px] leading-tight" data-i18n="statusActive">Trạng thái: Hoạt động thời gian thực</span>
+        </div>
+
+        <!-- Copyright Notice -->
+        <div class="font-medium text-[11px] hover:text-github-lightText dark:hover:text-github-darkText transition-colors whitespace-nowrap">
+            &copy; 2026 - hoana2007
+        </div>
+    </footer>
+
+    <!-- Modal: External CDN Libraries Selector -->
+    <div id="library-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-github-light dark:bg-github-dark border border-github-lightBorder dark:border-github-darkBorder rounded-xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-github-lightBorder dark:border-github-darkBorder flex items-center justify-between bg-github-lightSecondary dark:bg-github-darkSecondary">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="box" class="w-5 h-5 text-github-accent"></i>
+                    <h3 class="font-bold text-github-lightText dark:text-github-darkText" data-i18n="modalTitle">Tích hợp thư viện CDN</h3>
+                </div>
+                <button onclick="toggleModal('library-modal')" class="text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-2.5 flex-1 text-sm">
+                <p class="text-github-lightMuted dark:text-github-darkMuted text-xs mb-3" data-i18n="modalSub">Chọn các CDN phổ biến để tự động nạp vào khung xem trước:</p>
+
+                <!-- CDN Selection Items -->
+                <label class="flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition">
+                    <input type="checkbox" value="tailwind" class="cdn-checkbox mt-1 rounded border-github-lightBorder dark:border-github-darkBorder text-github-accent focus:ring-0">
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText">Tailwind CSS (v3 CDN)</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted">Framework Utility-first CSS phổ biến.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition">
+                    <input type="checkbox" value="bootstrap" class="cdn-checkbox mt-1 rounded border-github-lightBorder dark:border-github-darkBorder text-github-accent focus:ring-0">
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText">Bootstrap 5 (CSS + JS)</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted">Giao diện responsive và các component có sẵn.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition">
+                    <input type="checkbox" value="fontawesome" class="cdn-checkbox mt-1 rounded border-github-lightBorder dark:border-github-darkBorder text-github-accent focus:ring-0">
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText">FontAwesome 6 Icons</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted">Bộ biểu tượng phong phú.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition">
+                    <input type="checkbox" value="animatecss" class="cdn-checkbox mt-1 rounded border-github-lightBorder dark:border-github-darkBorder text-github-accent focus:ring-0">
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText">Animate.css</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted">Bộ hiệu ứng chuyển động CSS sẵn có.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition">
+                    <input type="checkbox" value="threejs" class="cdn-checkbox mt-1 rounded border-github-lightBorder dark:border-github-darkBorder text-github-accent focus:ring-0">
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText">Three.js</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted">Thư viện đồ họa 3D WebGL mạnh mẽ.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition">
+                    <input type="checkbox" value="jquery" class="cdn-checkbox mt-1 rounded border-github-lightBorder dark:border-github-darkBorder text-github-accent focus:ring-0">
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText">jQuery (3.7)</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted">Thao tác DOM và sự kiện JS nhanh chóng.</div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="p-3 border-t border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary dark:bg-github-darkSecondary flex justify-end space-x-2">
+                <button onclick="toggleModal('library-modal')" class="px-3.5 py-1.5 text-xs font-medium text-github-lightMuted dark:text-github-darkMuted hover:bg-github-light dark:hover:bg-github-dark rounded-md" data-i18n="cancel">Hủy</button>
+                <button onclick="applyLibraries()" class="px-3.5 py-1.5 text-xs font-semibold bg-github-accent hover:bg-github-accentHover text-white rounded-md shadow-sm" data-i18n="apply">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirm Reset (Replaces native confirm prompt) -->
+    <div id="reset-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-github-light dark:bg-github-dark border border-github-lightBorder dark:border-github-darkBorder rounded-xl w-full max-w-sm shadow-2xl p-4 space-y-4">
+            <div class="flex items-center space-x-2 text-rose-500 font-bold text-sm">
+                <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i>
+                <span data-i18n="resetConfirmTitle">Khôi phục mã nguồn</span>
+            </div>
+            <p class="text-xs text-github-lightMuted dark:text-github-darkMuted leading-relaxed" data-i18n="resetConfirmMsg">
+                Bạn có chắc chắn muốn khôi phục toàn bộ mã nguồn về trạng thái mặc định ban đầu không?
+            </p>
+            <div class="flex justify-end space-x-2 pt-1">
+                <button onclick="toggleModal('reset-modal')" class="px-3 py-1.5 text-xs font-medium text-github-lightMuted dark:text-github-darkMuted hover:bg-github-light dark:hover:bg-github-dark rounded-md" data-i18n="cancel">Hủy</button>
+                <button onclick="executeReset()" class="px-3 py-1.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-md shadow-sm" data-i18n="confirmResetBtn">Khôi phục</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Export / Download options (Single HTML file vs ZIP of 3 separate files) -->
+    <div id="export-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-github-light dark:bg-github-dark border border-github-lightBorder dark:border-github-darkBorder rounded-xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-github-lightBorder dark:border-github-darkBorder flex items-center justify-between bg-github-lightSecondary dark:bg-github-darkSecondary">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="download" class="w-5 h-5 text-github-accent"></i>
+                    <h3 class="font-bold text-github-lightText dark:text-github-darkText" data-i18n="exportModalTitle">Tải xuống dự án</h3>
+                </div>
+                <button onclick="toggleModal('export-modal')" class="text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-2.5 text-sm">
+                <p class="text-github-lightMuted dark:text-github-darkMuted text-xs mb-3" data-i18n="exportModalSub">Chọn định dạng tải xuống phù hợp với nhu cầu của bạn:</p>
+
+                <!-- Option 1: Single HTML file -->
+                <button onclick="exportHTML()" class="w-full flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition text-left">
+                    <i data-lucide="file-code" class="w-5 h-5 text-github-accent shrink-0 mt-0.5"></i>
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText" data-i18n="exportSingleTitle">1 file HTML duy nhất</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted" data-i18n="exportSingleDesc">Gộp HTML + CSS + JS và CDN vào 1 file .html, mở là chạy ngay.</div>
+                    </div>
+                </button>
+
+                <!-- Option 2: ZIP with 3 separate files -->
+                <button onclick="exportProjectZip()" class="w-full flex items-start space-x-3 p-3 rounded-lg border border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary/50 dark:bg-github-darkSecondary/50 hover:border-github-accent cursor-pointer transition text-left">
+                    <i data-lucide="file-archive" class="w-5 h-5 text-github-green shrink-0 mt-0.5"></i>
+                    <div>
+                        <div class="font-semibold text-github-lightText dark:text-github-darkText" data-i18n="exportZipTitle">File ZIP gồm 3 file riêng</div>
+                        <div class="text-xs text-github-lightMuted dark:text-github-darkMuted" data-i18n="exportZipDesc">Tách thành index.html + style.css + script.js, đóng gói trong 1 file .zip.</div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="p-3 border-t border-github-lightBorder dark:border-github-darkBorder bg-github-lightSecondary dark:bg-github-darkSecondary flex justify-end space-x-2">
+                <button onclick="toggleModal('export-modal')" class="px-3.5 py-1.5 text-xs font-medium text-github-lightMuted dark:text-github-darkMuted hover:bg-github-light dark:hover:bg-github-dark rounded-md" data-i18n="cancel">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Banner -->
+    <div id="toast" class="fixed bottom-12 right-5 bg-github-light dark:bg-github-darkSecondary border border-github-lightBorder dark:border-github-darkBorder text-github-lightText dark:text-github-darkText text-xs px-4 py-2.5 rounded-lg shadow-xl flex items-center space-x-2.5 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+        <span id="toast-msg">Thông báo</span>
+    </div>
+
+    <script>
+        /* Internationalization (i18n) Translations Dictionary */
+        const I18N_TRANSLATIONS = {
+            vi: {
+                libraries: "Thư viện",
+                autoRun: "Auto-run",
+                run: "Chạy",
+                clear: "Xóa",
+                consoleOutput: "Console Output",
+                consoleReady: "Sẵn sàng nhận log từ JavaScript...",
+                statusActive: "Trạng thái: Hoạt động thời gian thực",
+                modalTitle: "Tích hợp thư viện CDN",
+                modalSub: "Chọn các CDN phổ biến để tự động nạp vào khung xem trước:",
+                cancel: "Hủy",
+                apply: "Áp dụng",
+                resetConfirmTitle: "Khôi phục mã nguồn",
+                resetConfirmMsg: "Bạn có chắc chắn muốn khôi phục toàn bộ mã nguồn về trạng thái mặc định ban đầu không?",
+                confirmResetBtn: "Khôi phục",
+                shareTitle: "Chia sẻ URL",
+                exportTitle: "Tải xuống dự án",
+                resetTitle: "Khôi phục mã",
+                exportModalTitle: "Tải xuống dự án",
+                exportModalSub: "Chọn định dạng tải xuống phù hợp với nhu cầu của bạn:",
+                exportSingleTitle: "1 file HTML duy nhất",
+                exportSingleDesc: "Gộp HTML + CSS + JS và CDN vào 1 file .html, mở là chạy ngay.",
+                exportZipTitle: "File ZIP gồm 3 file riêng",
+                exportZipDesc: "Tách thành index.html + style.css + script.js, đóng gói trong 1 file .zip.",
+                toastExportZip: "Đã xuất file ZIP (3 file HTML/CSS/JS) thành công!",
+                toastExportZipError: "Không tạo được file ZIP. Vui lòng kiểm tra kết nối mạng rồi thử lại!",
+                toastFormat: "Đã căn chỉnh định dạng code!",
+                toastCdn: "Đã nạp {count} thư viện CDN!",
+                toastExport: "Đã xuất file HTML thành công!",
+                toastShare: "Đã sao chép liên kết chia sẻ!",
+                toastReset: "Đã khôi phục mã nguồn ban đầu!",
+                toastLoaded: "Đã nạp dự án từ liên kết!"
+            },
+            en: {
+                libraries: "Libraries",
+                autoRun: "Auto-run",
+                run: "Run",
+                clear: "Clear",
+                consoleOutput: "Console Output",
+                consoleReady: "Ready to receive JavaScript logs...",
+                statusActive: "Status: Real-time Active",
+                modalTitle: "CDN Libraries Integration",
+                modalSub: "Select popular CDNs to automatically include in preview:",
+                cancel: "Cancel",
+                apply: "Apply",
+                resetConfirmTitle: "Reset Source Code",
+                resetConfirmMsg: "Are you sure you want to reset all source code to the original default template?",
+                confirmResetBtn: "Reset Code",
+                shareTitle: "Share Link",
+                exportTitle: "Download Project",
+                resetTitle: "Reset Code",
+                exportModalTitle: "Download Project",
+                exportModalSub: "Choose the download format that suits your needs:",
+                exportSingleTitle: "Single HTML file",
+                exportSingleDesc: "Merge HTML + CSS + JS and CDNs into 1 .html file, ready to run.",
+                exportZipTitle: "ZIP file with 3 separate files",
+                exportZipDesc: "Split into index.html + style.css + script.js, packed in 1 .zip file.",
+                toastExportZip: "ZIP file (3 HTML/CSS/JS files) exported successfully!",
+                toastExportZipError: "Could not create the ZIP file. Please check your connection and try again!",
+                toastFormat: "Code formatted successfully!",
+                toastCdn: "Loaded {count} CDN libraries!",
+                toastExport: "HTML file exported successfully!",
+                toastShare: "Share link copied to clipboard!",
+                toastReset: "Restored to default source code!",
+                toastLoaded: "Loaded project from link!"
+            }
+        };
+
+        const CDN_LIBRARIES = {
+            tailwind: '<script src="https://cdn.tailwindcss.com"><\/script>',
+            bootstrap: '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"><\/script>',
+            fontawesome: '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">',
+            animatecss: '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">',
+            threejs: '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>',
+            jquery: '<script src="https://code.jquery.com/jquery-3.7.1.min.js"><\/script>'
+        };
+
+        const DEFAULT_HTML = `<div class="card">
+  <h1>Hello, LiveCode Canvas! 🚀</h1>
+  <p>Start editing HTML, CSS, and JavaScript in real-time.</p>
+  <button id="btn-click">Click Me!</button>
+  <p id="counter">Clicked 0 times</p>
+</div>`;
+
+        const DEFAULT_CSS = `body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0d1117;
+  color: #f0f6fc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+h1 {
+  color: #2f81f7;
+  margin-top: 0;
+}
+
+button {
+  background-color: #238636;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #2ea043;
+}`;
+
+        const DEFAULT_JS = `let count = 0;
+const btn = document.getElementById('btn-click');
+const counterText = document.getElementById('counter');
+
+btn.addEventListener('click', () => {
+  count++;
+  counterText.textContent = 'Clicked ' + count + ' times';
+  console.log('Button clicked! Total count: ' + count);
+});
+
+console.log('LiveCode Canvas initialized successfully.');`;
+
+        /* Global Application State */
+        let editors = {};
+        let activeTab = 'html';
+        let activeCDNs = new Set();
+        let debounceTimer = null;
+        let isConsoleExpanded = true;
+        let consoleCount = 0;
+        let currentTheme = 'dark'; // 'dark' or 'light'
+        let currentLang = 'vi'; // 'vi' or 'en'
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('livecode_theme', currentTheme);
+            applyThemeUI();
+        }
+
+        function applyThemeUI() {
+            const htmlEl = document.documentElement;
+            const sunIcon = document.getElementById('theme-icon-sun');
+            const moonIcon = document.getElementById('theme-icon-moon');
+            
+            if (currentTheme === 'dark') {
+                htmlEl.classList.add('dark');
+                htmlEl.classList.remove('html-light');
+                htmlEl.classList.add('html-dark');
+                if (sunIcon) sunIcon.classList.remove('hidden');
+                if (moonIcon) moonIcon.classList.add('hidden');
+            } else {
+                htmlEl.classList.remove('dark');
+                htmlEl.classList.add('html-light');
+                htmlEl.classList.remove('html-dark');
+                if (sunIcon) sunIcon.classList.add('hidden');
+                if (moonIcon) moonIcon.classList.remove('hidden');
+            }
+
+            const cmTheme = currentTheme === 'dark' ? 'dracula' : 'neo';
+            Object.keys(editors).forEach(key => {
+                if (editors[key]) {
+                    editors[key].setOption('theme', cmTheme);
+                }
+            });
+        }
+
+        function setDeviceMode(width) {
+            const iframe = document.getElementById('live-preview-iframe');
+            const btnDesktop = document.getElementById('btn-device-desktop');
+            const btnTablet = document.getElementById('btn-device-tablet');
+            const btnMobile = document.getElementById('btn-device-mobile');
+
+            const activeClass = "px-2.5 py-1 font-medium rounded flex items-center space-x-1.5 bg-github-lightSecondary dark:bg-github-darkSecondary text-github-accent shadow-sm transition";
+            const inactiveClass = "px-2.5 py-1 font-medium rounded flex items-center space-x-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText transition";
+
+            if (btnDesktop) btnDesktop.className = width === 'full' ? activeClass : inactiveClass;
+            if (btnTablet) btnTablet.className = width === '768px' ? activeClass : inactiveClass;
+            if (btnMobile) btnMobile.className = width === '375px' ? activeClass : inactiveClass;
+
+            if (iframe) {
+                if (width === 'full') {
+                    iframe.style.width = '100%';
+                    iframe.style.maxWidth = '100%';
+                } else {
+                    iframe.style.width = width;
+                    iframe.style.maxWidth = '100%';
+                }
+            }
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            ['html', 'css', 'js'].forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const wrapper = document.getElementById(`wrapper-${t}`);
+                if (t === tab) {
+                    if (btn) btn.className = "tab-btn px-3 py-1.5 text-xs font-semibold rounded-t-md flex items-center space-x-1.5 border-b-2 border-github-accent text-github-accent bg-github-light dark:bg-github-dark";
+                    if (wrapper) wrapper.classList.remove('hidden');
+                    if (editors[t]) {
+                        editors[t].refresh();
+                        editors[t].focus();
+                        const pos = editors[t].getCursor();
+                        const posEl = document.getElementById('editor-cursor-pos');
+                        if (posEl) posEl.textContent = `Ln ${pos.line + 1}, Col ${pos.ch + 1}`;
+                    }
+                } else {
+                    if (btn) btn.className = "tab-btn px-3 py-1.5 text-xs font-semibold rounded-t-md flex items-center space-x-1.5 text-github-lightMuted dark:text-github-darkMuted hover:text-github-lightText dark:hover:text-github-darkText";
+                    if (wrapper) wrapper.classList.add('hidden');
+                }
+            });
+        }
+
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.toggle('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            if (toast && toastMsg) {
+                toastMsg.textContent = message;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+        }
+
+        function updateCDNCheckboxes() {
+            document.querySelectorAll('.cdn-checkbox').forEach(cb => {
+                cb.checked = activeCDNs.has(cb.value);
+            });
+            const badge = document.getElementById('active-cdn-badge');
+            if (badge) {
+                if (activeCDNs.size > 0) {
+                    badge.textContent = activeCDNs.size;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+
+        function triggerRunCode() {
+            if (!editors.html || !editors.css || !editors.js) return;
+
+            const html = editors.html.getValue();
+            const css = editors.css.getValue();
+            let js = editors.js.getValue();
+
+            let cdnTags = '';
+            activeCDNs.forEach(key => {
+                if (CDN_LIBRARIES[key]) cdnTags += CDN_LIBRARIES[key] + '\n';
+            });
+
+            const consoleOverrideScript = `
+              <script>
+                (function() {
+                  const sendLog = (level, args) => {
+                    try {
+                      window.parent.postMessage({
+                        type: 'LIVE_CONSOLE_LOG',
+                        level: level,
+                        args: Array.from(args).map(arg => {
+                          try {
+                            return typeof arg === 'object' ? JSON.parse(JSON.stringify(arg)) : String(arg);
+                          } catch(e) {
+                            return String(arg);
+                          }
+                        })
+                      }, '*');
+                    } catch(e) {}
+                  };
+
+                  ['log', 'error', 'warn', 'info'].forEach(level => {
+                    const original = console[level];
+                    console[level] = function(...args) {
+                      sendLog(level, args);
+                      if (original) original.apply(console, args);
+                    };
+                  });
+
+                  window.onerror = function(msg, url, line, col, error) {
+                    sendLog('error', ['Uncaught Error: ' + msg + ' (Line ' + line + ', Col ' + col + ')']);
+                    return false;
+                  };
+
+                  let __loopGuardCount = 0;
+                  let __lastLoopTime = Date.now();
+                  window.__checkLoopGuard = function(id) {
+                    __loopGuardCount++;
+                    if (__loopGuardCount > 10000) {
+                      const now = Date.now();
+                      if (now - __lastLoopTime < 1000) {
+                        throw new Error('Infinite loop detected! Execution terminated.');
+                      }
+                      __loopGuardCount = 0;
+                      __lastLoopTime = now;
+                    }
+                  };
+                })();
+              <\/script>
+            `;
+
+            const protectedJS = applyLoopProtection(js);
+
+            const fullHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${cdnTags}
+  <style>
+    ${css}
+  </style>
+  ${consoleOverrideScript}
+</head>
+<body>
+  ${html}
+  <script>
+    try {
+      ${protectedJS}
+    } catch(err) {
+      console.error(err.message);
+    }
+  <\/script>
+</body>
+</html>`;
+
+            const iframe = document.getElementById('live-preview-iframe');
+            if (iframe) iframe.srcdoc = fullHTML;
+
+            // Save state to LocalStorage
+            const projectData = {
+                title: document.getElementById('project-title').value,
+                html: editors.html.getValue(),
+                css: editors.css.getValue(),
+                js: editors.js.getValue(),
+                cdns: Array.from(activeCDNs)
+            };
+            localStorage.setItem('livecode_canvas_data', JSON.stringify(projectData));
+        }
+
+        function initConsoleListener() {
+            window.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'LIVE_CONSOLE_LOG') {
+                    const logsContainer = document.getElementById('console-logs');
+                    const placeholder = document.getElementById('console-placeholder');
+                    if (placeholder) placeholder.remove();
+
+                    consoleCount++;
+                    const countEl = document.getElementById('console-count');
+                    if (countEl) countEl.textContent = consoleCount;
+
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `console-log console-${event.data.level} py-1 px-1 flex items-start space-x-2 font-mono text-[12px]`;
+
+                    const iconMap = { log: '•', error: '✕', warn: '⚠', info: 'ℹ' };
+                    const argsText = event.data.args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+                    logEntry.innerHTML = `<span class="opacity-60 select-none">${iconMap[event.data.level] || '•'}</span> <span>${escapeHTML(argsText)}</span>`;
+                    
+                    if (logsContainer) {
+                        logsContainer.appendChild(logEntry);
+                        logsContainer.scrollTop = logsContainer.scrollHeight;
+                    }
+                }
+            });
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+
+        function toggleConsoleExpand() {
+            const pane = document.getElementById('console-pane');
+            const icon = document.getElementById('console-expand-icon');
+            if (pane && icon) {
+                if (isConsoleExpanded) {
+                    pane.style.height = '32px';
+                    icon.style.transform = 'rotate(180deg)';
+                    isConsoleExpanded = false;
+                } else {
+                    pane.style.height = '176px';
+                    icon.style.transform = 'rotate(0deg)';
+                    isConsoleExpanded = true;
+                }
+            }
+        }
+
+        function initSplitter() {
+            const gutter = document.getElementById('split-gutter');
+            const editorBox = document.getElementById('editor-container');
+            const iframeShield = document.getElementById('iframe-shield');
+            let isDragging = false;
+
+            if (!gutter || !editorBox) return;
+
+            const onMouseDown = (e) => {
+                isDragging = true;
+                if (iframeShield) iframeShield.classList.remove('hidden');
+                document.body.style.cursor = window.innerWidth >= 768 ? 'col-resize' : 'row-resize';
+            };
+
+            const onMouseMove = (e) => {
+                if (!isDragging) return;
+                const isDesktop = window.innerWidth >= 768;
+                if (isDesktop) {
+                    const containerWidth = document.querySelector('main').clientWidth;
+                    const newWidth = (e.clientX / containerWidth) * 100;
+                    if (newWidth > 15 && newWidth < 85) editorBox.style.width = `${newWidth}%`;
+                } else {
+                    const mainHeight = document.querySelector('main').clientHeight;
+                    const headerHeight = 56;
+                    const newHeight = ((e.clientY - headerHeight) / mainHeight) * 100;
+                    if (newHeight > 15 && newHeight < 85) editorBox.style.height = `${newHeight}%`;
+                }
+            };
+
+            const onMouseUp = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    if (iframeShield) iframeShield.classList.add('hidden');
+                    document.body.style.cursor = '';
+                    Object.keys(editors).forEach(key => {
+                        if (editors[key]) editors[key].refresh();
+                    });
+                }
+            };
+
+            gutter.addEventListener('mousedown', onMouseDown);
+            gutter.addEventListener('touchstart', onMouseDown);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('touchmove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+            window.addEventListener('touchend', onMouseUp);
+        }
+
+        /* Initialization on DOM Load */
+        window.addEventListener('DOMContentLoaded', () => {
+            
+            // Check saved theme or system preference
+            const savedTheme = localStorage.getItem('livecode_theme');
+            if (savedTheme) {
+                currentTheme = savedTheme;
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                currentTheme = 'light';
+            }
+            applyThemeUI();
+
+            // Check saved language
+            const savedLang = localStorage.getItem('livecode_lang');
+            if (savedLang && (savedLang === 'vi' || savedLang === 'en')) {
+                currentLang = savedLang;
+            }
+            applyLanguage();
+
+            // Initialize CodeMirror Editors
+            editors.html = CodeMirror(document.getElementById('wrapper-html'), {
+                value: DEFAULT_HTML,
+                mode: 'htmlmixed',
+                theme: currentTheme === 'dark' ? 'dracula' : 'neo',
+                lineNumbers: true,
+                autoCloseTags: true,
+                autoCloseBrackets: true,
+                lineWrapping: true,
+                tabSize: 2
+            });
+
+            editors.css = CodeMirror(document.getElementById('wrapper-css'), {
+                value: DEFAULT_CSS,
+                mode: 'css',
+                theme: currentTheme === 'dark' ? 'dracula' : 'neo',
+                lineNumbers: true,
+                autoCloseBrackets: true,
+                lineWrapping: true,
+                tabSize: 2
+            });
+
+            editors.js = CodeMirror(document.getElementById('wrapper-js'), {
+                value: DEFAULT_JS,
+                mode: 'javascript',
+                theme: currentTheme === 'dark' ? 'dracula' : 'neo',
+                lineNumbers: true,
+                autoCloseBrackets: true,
+                lineWrapping: true,
+                tabSize: 2
+            });
+
+            // Load Saved Data from URL Hash or LocalStorage
+            loadSavedState();
+
+            // Bind Editor Change & Cursor Activity Handlers
+            Object.keys(editors).forEach(key => {
+                editors[key].on('change', () => {
+                    if (document.getElementById('auto-run-toggle').checked) {
+                        scheduleRunCode();
+                    }
+                });
+
+                editors[key].on('cursorActivity', (cm) => {
+                    if (key === activeTab) {
+                        const pos = cm.getCursor();
+                        document.getElementById('editor-cursor-pos').textContent = `Ln ${pos.line + 1}, Col ${pos.ch + 1}`;
+                    }
+                });
+            });
+
+            // Initialize Lucide Icons
+            lucide.createIcons();
+
+            document.addEventListener('click', (event) => {
+                const panel = document.getElementById('mobile-menu-panel');
+                if (window.innerWidth <= 767 && panel && !panel.contains(event.target)) {
+                    closeMobileMenu();
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 767) {
+                    closeMobileMenu();
+                }
+            });
+
+            // Initialize Resizable Splitter & Console Listener
+            initSplitter();
+            initConsoleListener();
+
+            // First Code Execution Run
+            triggerRunCode();
+        });
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'vi' ? 'en' : 'vi';
+            localStorage.setItem('livecode_lang', currentLang);
+            applyLanguage();
+        }
+
+        function toggleMobileMenu() {
+            const panel = document.getElementById('mobile-menu-panel');
+            if (!panel) return;
+            panel.classList.toggle('open');
+        }
+
+        function closeMobileMenu() {
+            const panel = document.getElementById('mobile-menu-panel');
+            if (!panel) return;
+            panel.classList.remove('open');
+        }
+
+        function applyLanguage() {
+            const langIndicator = document.getElementById('lang-indicator');
+            if (langIndicator) langIndicator.textContent = currentLang.toUpperCase();
+
+            const dict = I18N_TRANSLATIONS[currentLang] || I18N_TRANSLATIONS.vi;
+
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key]) el.textContent = dict[key];
+            });
+
+            // Update all elements with data-i18n-title attribute
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (dict[key]) el.setAttribute('title', dict[key]);
+            });
+        }
+
+        function formatActiveEditor() {
+            const cm = editors[activeTab];
+            const totalLines = cm.lineCount();
+            for (let i = 0; i < totalLines; i++) {
+                cm.indentLine(i, 'smart');
+            }
+            const dict = I18N_TRANSLATIONS[currentLang];
+            showToast(dict.toastFormat);
+        }
+
+        /* Protect JS code against infinite loops */
+        function applyLoopProtection(jsCode) {
+            let loopId = 0;
+            return jsCode.replace(/(for|while|do)\s*\(([^)]*)\)\s*\{/g, (match, loopType, condition) => {
+                loopId++;
+                return `${loopType} (${condition}) { window.__checkLoopGuard(${loopId});`;
+            });
+        }
+
+        function scheduleRunCode() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                triggerRunCode();
+            }, 300);
+        }
+
+        function clearConsole() {
+            const dict = I18N_TRANSLATIONS[currentLang];
+            document.getElementById('console-logs').innerHTML = `<div class="text-github-lightMuted dark:text-github-darkMuted italic text-[11px]">${dict.consoleReady}</div>`;
+            consoleCount = 0;
+            document.getElementById('console-count').textContent = '0';
+        }
+
+        function applyLibraries() {
+            activeCDNs.clear();
+            const checkboxes = document.querySelectorAll('.cdn-checkbox:checked');
+            checkboxes.forEach(cb => activeCDNs.add(cb.value));
+
+            const badge = document.getElementById('active-cdn-badge');
+            if (activeCDNs.size > 0) {
+                badge.textContent = activeCDNs.size;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            toggleModal('library-modal');
+            const dict = I18N_TRANSLATIONS[currentLang];
+            showToast(dict.toastCdn.replace('{count}', activeCDNs.size));
+            triggerRunCode();
+        }
+
+        function getExportBaseName() {
+            const raw = (document.getElementById('project-title').value || 'livecode-export').trim();
+            const clean = raw.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
+            return clean || 'livecode-export';
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('export-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function exportHTML() {
+            const html = editors.html.getValue();
+            const css = editors.css.getValue();
+            const js = editors.js.getValue();
+
+            let cdnTags = '';
+            activeCDNs.forEach(key => {
+                if (CDN_LIBRARIES[key]) cdnTags += CDN_LIBRARIES[key] + '\n';
+            });
+
+            const fullContent = `<!DOCTYPE html>
+<html lang="${currentLang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${document.getElementById('project-title').value || 'My Project'}</title>
+  ${cdnTags}
+  <style>
+${css}
+  </style>
+</head>
+<body>
+${html}
+  <script>
+${js}
+  <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([fullContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${getExportBaseName()}.html`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            closeExportModal();
+            const dict = I18N_TRANSLATIONS[currentLang];
+            showToast(dict.toastExport);
+        }
+
+        async function exportProjectZip() {
+            const dict = I18N_TRANSLATIONS[currentLang];
+            if (typeof JSZip === 'undefined') {
+                showToast(dict.toastExportZipError);
+                return;
+            }
+
+            const baseName = getExportBaseName();
+            const title = document.getElementById('project-title').value || 'My Project';
+            const html = editors.html.getValue();
+            const css = editors.css.getValue();
+            const js = editors.js.getValue();
+
+            let cdnTags = '';
+            activeCDNs.forEach(key => {
+                if (CDN_LIBRARIES[key]) cdnTags += '  ' + CDN_LIBRARIES[key] + '\n';
+            });
+
+            const indexHtml = `<!DOCTYPE html>
+<html lang="${currentLang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+${cdnTags}  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+${html}
+  <script src="script.js"><\/script>
+</body>
+</html>`;
+
+            try {
+                const zip = new JSZip();
+                zip.file('index.html', indexHtml);
+                zip.file('style.css', css);
+                zip.file('script.js', js);
+
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${baseName}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                closeExportModal();
+                showToast(dict.toastExportZip);
+            } catch (e) {
+                console.error(e);
+                showToast(dict.toastExportZipError);
+            }
+        }
+
+        function shareProject() {
+            const projectData = {
+                title: document.getElementById('project-title').value,
+                html: editors.html.getValue(),
+                css: editors.css.getValue(),
+                js: editors.js.getValue(),
+                cdns: Array.from(activeCDNs)
+            };
+
+            const encoded = btoa(encodeURIComponent(JSON.stringify(projectData)));
+            const shareableURL = `${window.location.origin}${window.location.pathname}#code=${encoded}`;
+
+            const tempInput = document.createElement('input');
+            tempInput.value = shareableURL;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            const dict = I18N_TRANSLATIONS[currentLang];
+            showToast(dict.toastShare);
+        }
+
+        function loadSavedState() {
+            if (window.location.hash.startsWith('#code=')) {
+                try {
+                    const encoded = window.location.hash.replace('#code=', '');
+                    const decoded = JSON.parse(decodeURIComponent(atob(encoded)));
+                    if (decoded) {
+                        document.getElementById('project-title').value = decoded.title || 'shared-project';
+                        editors.html.setValue(decoded.html || '');
+                        editors.css.setValue(decoded.css || '');
+                        editors.js.setValue(decoded.js || '');
+                        if (decoded.cdns) {
+                            decoded.cdns.forEach(c => activeCDNs.add(c));
+                            updateCDNCheckboxes();
+                        }
+                        const dict = I18N_TRANSLATIONS[currentLang];
+                        showToast(dict.toastLoaded);
+                        return;
+                    }
+                } catch(e) {}
+            }
+
+            const saved = localStorage.getItem('livecode_canvas_data');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    document.getElementById('project-title').value = data.title || 'my-web-project';
+                    editors.html.setValue(data.html || '');
+                    editors.css.setValue(data.css || '');
+                    editors.js.setValue(data.js || '');
+                    if (data.cdns) {
+                        data.cdns.forEach(c => activeCDNs.add(c));
+                        updateCDNCheckboxes();
+                    }
+                } catch(e) {}
+            }
+        }
+
+        /* Open Modal & Reset Logic (Replaces alert/confirm) */
+        function openResetModal() {
+            toggleModal('reset-modal');
+        }
+
+        function executeReset() {
+            editors.html.setValue(DEFAULT_HTML);
+            editors.css.setValue(DEFAULT_CSS);
+            editors.js.setValue(DEFAULT_JS);
+            activeCDNs.clear();
+            updateCDNCheckboxes();
+            localStorage.removeItem('livecode_canvas_data');
+            window.location.hash = '';
+            toggleModal('reset-modal');
+            triggerRunCode();
+            
+            const dict = I18N_TRANSLATIONS[currentLang];
+            showToast(dict.toastReset);
+        }
+    </script>
+</body>
+</html>
