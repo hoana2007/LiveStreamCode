@@ -19,6 +19,8 @@ LiveStream Code Editor là một ứng dụng web cho phép lập trình viên, 
 - 📱 **Responsive Design**: Giao diện linh hoạt, tương thích hoàn hảo trên Desktop, Tablet và Mobile.
 - ⚡ **Trạng thái hoạt động**: Hiển thị trạng thái "Hoạt động thời gian thực" giúp người dùng yên tâm khi sử dụng.
 
+- 📥 ** Cho phép tải **: 1 tệp html hoặc 3 tệp html, css và javasctipt đơn lẻ.
+
 ---
 
 ## 📦 Thư viện CDN được hỗ trợ
