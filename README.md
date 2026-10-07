@@ -62,3 +62,5 @@ Công cụ cung cấp sẵn menu tích hợp các CDN phổ biến, tự động
 © 2026 - **hoana2007**. 
 
 *Được phát triển với mục đích hỗ trợ soạn thảo và kiểm thử mã nguồn nhanh chóng.*
+
+## Code web do bạn Gemeni tạo ra.
