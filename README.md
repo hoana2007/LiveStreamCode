@@ -40,7 +40,7 @@ Công cụ cung cấp sẵn menu tích hợp các CDN phổ biến, tự động
 
 ## 🛠️ Hướng dẫn sử dụng
 
-1. **Mở ứng dụng**: Mở file `liveCode2.html` trên bất kỳ trình duyệt web hiện đại nào (Chrome, Edge, Firefox, Safari...).
+1. **Mở ứng dụng**: Mở file `index.html` trên bất kỳ trình duyệt web hiện đại nào (Chrome, Edge, Firefox, Safari...).
 2. **Viết mã**: Chuyển đổi giữa các tab `index.html`, `style.css`, `script.js` ở thanh điều hướng để viết mã.
 3. **Xem kết quả**: Khung xem trước (Preview) sẽ tự động cập nhật (nếu bật Auto-run) hoặc bạn nhấn nút **Run**.
 4. **Debug**: Theo dõi các `console.log()` hoặc lỗi ở khung **Console Output** phía dưới.
